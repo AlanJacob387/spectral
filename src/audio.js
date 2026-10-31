@@ -18,7 +18,7 @@
 //   setArp(bool)
 //   setFilter(hz)           200 .. 8000
 //   setReverb(wet01)        0 .. 1
-//   setVolume(db)           -40 .. 0
+//   setVolume(db)           6 .. 12
 //   setPan(p)               -1 .. 1
 //   nextKey()               cycle root key
 //   state                   read-only snapshot for the HUD
@@ -149,7 +149,7 @@ export function setArp(on) {
 
 export function setFilter(hz)  { filter?.frequency.rampTo(clamp(hz, 200, 8000), 0.08); }
 export function setReverb(wet) { reverb?.wet.rampTo(clamp(wet, 0, 1), 0.15); }
-export function setVolume(db)  { master?.volume.rampTo(clamp(db, -40, 12), 0.1); }
+export function setVolume(db)  { master?.volume.rampTo(clamp(db, 6, 12), 0.1); }
 export function setPan(p)      { panner?.pan.rampTo(clamp(p, -1, 1), 0.08); }
 
 export function nextKey() {

@@ -66,7 +66,7 @@ export function applyMapping(hands, nowMs) {
     const d = handsDistance(right, left);
     if (d != null) {
         audio.setReverb(lerp(0.15, 0.85, clamp01((d - 0.1) / 0.6)));
-        audio.setVolume(lerp(2, 10, clamp01((d - 0.1) / 0.6)));
+        audio.setVolume(lerp(6, 10, clamp01((d - 0.1) / 0.6)));
 
         if (right.closed && left.closed && d < VANISH_DIST && nowMs - m.lastVanish > VANISH_COOLDOWN_MS) {
             m.lastVanish = nowMs;
