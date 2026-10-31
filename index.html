@@ -22,10 +22,11 @@
     <div class="start-card">
         <p class="eyebrow">A tool for the recently departed</p>
         <h1>Spectral</h1>
-        <p class="tagline">You can no longer touch anything.<br />You can still gesture.<br />That is enough to play.</p>
+        <p class="tagline">You can no longer touch anything.<br />You can still gesture.<br />That is enough to play. Bring a second ghost; there is room for two.</p>
 
         <div class="rite">
             <div class="rite-row"><span class="sigil">✋</span><span><b>Right hand</b> rises for pitch. <b>Close</b> it to sound a note, <b>open</b> it to let go. Move fast to strike hard.</span></div>
+            <div class="rite-row"><span class="sigil">✌</span><span><b>Right hand</b>, one finger → a <i>single</i> note. Two → <i>minor</i>, sorrowful. Three → <i>major</i>, at peace.</span></div>
             <div class="rite-row"><span class="sigil">☝</span><span><b>Left hand</b> raises fingers to choose the voice — <i>1 Drift</i> · <i>2 Haunt</i> · <i>3 Knock</i> · <i>4 Wail</i>.</span></div>
             <div class="rite-row"><span class="sigil">🖐</span><span><b>Left hand</b> height clears or clouds the tone; left–right shifts the register. <b>Fist</b> holds the note.</span></div>
             <div class="rite-row"><span class="sigil">↔</span><span><b>Spread your hands</b> and the room grows larger. <b>Pinch</b> the left to set the notes wandering.</span></div>
@@ -43,33 +44,60 @@
     <video id="webcam" autoplay playsinline muted></video>
     <canvas id="overlay"></canvas>
 
-    <!-- Voice strip: highlighted by ui.js via .active -->
+    <!-- Player lanes: slot 0 (left), slot 1 (right). ui.js adds .live when a player is present -->
     <div id="voices">
-        <div class="voice-card" data-voice="drift"><span class="n">1</span><span class="voice">Drift</span><span class="reg">slow &amp; vast</span></div>
-        <div class="voice-card" data-voice="haunt"><span class="n">2</span><span class="voice">Haunt</span><span class="reg">glass bells</span></div>
-        <div class="voice-card" data-voice="knock"><span class="n">3</span><span class="voice">Knock</span><span class="reg">on wood</span></div>
-        <div class="voice-card" data-voice="wail"><span class="n">4</span><span class="voice">Wail</span><span class="reg">a gliding cry</span></div>
+        <section class="lane" data-slot="0">
+            <div class="lane-hud">
+                <div class="lane-title">Player one</div>
+                <div><span class="k">voice</span><span data-hud="instrument">—</span></div>
+                <div><span class="k">register</span><span data-hud="octave">—</span></div>
+                <div><span class="k">note</span><span data-hud="note">—</span></div>
+                <div><span class="k">mode</span><span data-hud="mode">—</span></div>
+                <div><span class="k">wander</span><span data-hud="arp">still</span></div>
+                <div><span class="k">hold</span><span data-hud="sustain">off</span></div>
+                <div><span class="k">hands</span><span data-hud="hands">none</span></div>
+            </div>
+            <div class="cards">
+                <div class="voice-card" data-voice="drift"><span class="n">1</span><span class="voice">Drift</span><span class="reg">slow &amp; vast</span></div>
+                <div class="voice-card" data-voice="haunt"><span class="n">2</span><span class="voice">Haunt</span><span class="reg">glass bells</span></div>
+                <div class="voice-card" data-voice="knock"><span class="n">3</span><span class="voice">Knock</span><span class="reg">on wood</span></div>
+                <div class="voice-card" data-voice="wail"><span class="n">4</span><span class="voice">Wail</span><span class="reg">a gliding cry</span></div>
+            </div>
+        </section>
+
+        <section class="lane" data-slot="1">
+            <div class="lane-hud">
+                <div class="lane-title">Player two</div>
+                <div><span class="k">voice</span><span data-hud="instrument">—</span></div>
+                <div><span class="k">register</span><span data-hud="octave">—</span></div>
+                <div><span class="k">note</span><span data-hud="note">—</span></div>
+                <div><span class="k">mode</span><span data-hud="mode">—</span></div>
+                <div><span class="k">wander</span><span data-hud="arp">still</span></div>
+                <div><span class="k">hold</span><span data-hud="sustain">off</span></div>
+                <div><span class="k">hands</span><span data-hud="hands">none</span></div>
+            </div>
+            <div class="cards">
+                <div class="voice-card" data-voice="drift"><span class="n">1</span><span class="voice">Drift</span><span class="reg">slow &amp; vast</span></div>
+                <div class="voice-card" data-voice="haunt"><span class="n">2</span><span class="voice">Haunt</span><span class="reg">glass bells</span></div>
+                <div class="voice-card" data-voice="knock"><span class="n">3</span><span class="voice">Knock</span><span class="reg">on wood</span></div>
+                <div class="voice-card" data-voice="wail"><span class="n">4</span><span class="voice">Wail</span><span class="reg">a gliding cry</span></div>
+            </div>
+        </section>
     </div>
 
     <!-- Vanish flash (two fists) -->
     <div id="vanish" aria-hidden="true"></div>
 
-    <!-- HUD -->
+    <!-- Global HUD -->
     <div id="hud">
         <div class="hud-title">Spectral</div>
-        <div><span class="k">voice</span><span id="hud-instrument">—</span></div>
-        <div><span class="k">register</span><span id="hud-octave">—</span></div>
-        <div><span class="k">note</span><span id="hud-note">—</span></div>
         <div><span class="k">key</span><span id="hud-key">C</span></div>
-        <div><span class="k">wander</span><span id="hud-arp">still</span></div>
-        <div><span class="k">hold</span><span id="hud-sustain">off</span></div>
-        <div><span class="k">hands</span><span id="hud-hands">none</span></div>
         <div><span class="k">fps</span><span id="hud-fps">0</span></div>
     </div>
 
     <!-- Keyboard hints -->
     <div id="hints">
-        <kbd>Space</kbd> banish all &nbsp; <kbd>K</kbd> change key &nbsp; <kbd>V</kbd> hide voices
+        <kbd>Space</kbd> banish all &nbsp; <kbd>K</kbd> change key &nbsp; <kbd>V</kbd> hide panels
     </div>
 </main>
 

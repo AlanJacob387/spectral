@@ -54,7 +54,7 @@ export async function initTracking(videoEl, onStatus = () => {}) {
     handLandmarker = await HandLandmarker.createFromOptions(vision, {
         baseOptions: { modelAssetPath: HAND_MODEL, delegate: 'GPU' },
         runningMode: 'VIDEO',
-        numHands: 2,
+        numHands: 4,
         minHandDetectionConfidence: 0.6,
         minHandPresenceConfidence: 0.6,
         minTrackingConfidence: 0.6,
