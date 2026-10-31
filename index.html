@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spectral — an instrument for ghosts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <!-- Tone.js (audio engine) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+</head>
+<body>
+
+<!-- Fog layers (pure CSS, animated) -->
+<div class="fog fog-1" aria-hidden="true"></div>
+<div class="fog fog-2" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<!-- Start overlay: browsers require a user gesture before audio + camera -->
+<div id="start-overlay">
+    <div class="start-card">
+        <p class="eyebrow">A tool for the recently departed</p>
+        <h1>Spectral</h1>
+        <p class="tagline">You can no longer touch anything.<br />You can still gesture.<br />That is enough to play.</p>
+
+        <div class="rite">
+            <div class="rite-row"><span class="sigil">✋</span><span><b>Right hand</b> rises for pitch. <b>Close</b> it to sound a note, <b>open</b> it to let go. Move fast to strike hard.</span></div>
+            <div class="rite-row"><span class="sigil">☝</span><span><b>Left hand</b> raises fingers to choose the voice — <i>1 Drift</i> · <i>2 Haunt</i> · <i>3 Knock</i> · <i>4 Wail</i>.</span></div>
+            <div class="rite-row"><span class="sigil">🖐</span><span><b>Left hand</b> height clears or clouds the tone; left–right shifts the register. <b>Fist</b> holds the note.</span></div>
+            <div class="rite-row"><span class="sigil">↔</span><span><b>Spread your hands</b> and the room grows larger. <b>Pinch</b> the left to set the notes wandering.</span></div>
+            <div class="rite-row"><span class="sigil">✊✊</span><span><b>Two fists, together</b> — and you vanish. Silence.</span></div>
+        </div>
+
+        <button id="start-btn">Manifest</button>
+        <p id="status" class="status">Awaiting your presence…</p>
+        <p class="footnote">Camera stays on this device. Nothing is sent anywhere. Nothing is touched.</p>
+    </div>
+</div>
+
+<!-- Stage: webcam, canvas overlay, voice strip -->
+<main id="stage">
+    <video id="webcam" autoplay playsinline muted></video>
+    <canvas id="overlay"></canvas>
+
+    <!-- Voice strip: highlighted by ui.js via .active -->
+    <div id="voices">
+        <div class="voice-card" data-voice="drift"><span class="n">1</span><span class="voice">Drift</span><span class="reg">slow &amp; vast</span></div>
+        <div class="voice-card" data-voice="haunt"><span class="n">2</span><span class="voice">Haunt</span><span class="reg">glass bells</span></div>
+        <div class="voice-card" data-voice="knock"><span class="n">3</span><span class="voice">Knock</span><span class="reg">on wood</span></div>
+        <div class="voice-card" data-voice="wail"><span class="n">4</span><span class="voice">Wail</span><span class="reg">a gliding cry</span></div>
+    </div>
+
+    <!-- Vanish flash (two fists) -->
+    <div id="vanish" aria-hidden="true"></div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-title">Spectral</div>
+        <div><span class="k">voice</span><span id="hud-instrument">—</span></div>
+        <div><span class="k">register</span><span id="hud-octave">—</span></div>
+        <div><span class="k">note</span><span id="hud-note">—</span></div>
+        <div><span class="k">key</span><span id="hud-key">C</span></div>
+        <div><span class="k">wander</span><span id="hud-arp">still</span></div>
+        <div><span class="k">hold</span><span id="hud-sustain">off</span></div>
+        <div><span class="k">hands</span><span id="hud-hands">none</span></div>
+        <div><span class="k">fps</span><span id="hud-fps">0</span></div>
+    </div>
+
+    <!-- Keyboard hints -->
+    <div id="hints">
+        <kbd>Space</kbd> banish all &nbsp; <kbd>K</kbd> change key &nbsp; <kbd>V</kbd> hide voices
+    </div>
+</main>
+
+<!-- App entry (ES module) -->
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

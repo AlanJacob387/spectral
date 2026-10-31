@@ -1,0 +1,396 @@
+/* ============================================================
+   Spectral — an instrument for ghosts
+   ============================================================ */
+
+:root {
+    --bg: #05060a;
+    --bg-2: #0b0d16;
+    --ink: #d9dce6;
+    --ink-dim: #7c8197;
+    --ink-faint: #3b3f52;
+    --wisp: #b8f2ff;
+    --wisp-glow: rgba(184, 242, 255, 0.55);
+    --drift: #8fd3ff;   /* pad      */
+    --haunt: #c9a6ff;   /* bell     */
+    --knock: #ffb27a;   /* perc     */
+    --wail:  #9effc9;   /* theremin */
+    --ember: #ff8a4c;
+    --line: rgba(217, 220, 230, 0.08);
+    --serif: "Cormorant Garamond", Georgia, serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--serif);
+    overflow: hidden;
+}
+
+/* ------------------------------------------------------------
+   Atmosphere: fog + vignette
+   ------------------------------------------------------------ */
+.fog {
+    position: fixed;
+    inset: -20%;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.55;
+    background:
+            radial-gradient(60% 50% at 20% 70%, rgba(143, 211, 255, 0.10), transparent 60%),
+            radial-gradient(50% 60% at 80% 30%, rgba(201, 166, 255, 0.08), transparent 60%),
+            radial-gradient(70% 40% at 50% 100%, rgba(255, 178, 122, 0.05), transparent 70%);
+    filter: blur(40px);
+    animation: fogDrift 38s ease-in-out infinite alternate;
+}
+.fog-2 {
+    opacity: 0.35;
+    animation-duration: 52s;
+    animation-direction: alternate-reverse;
+    background:
+            radial-gradient(50% 50% at 70% 80%, rgba(184, 242, 255, 0.08), transparent 60%),
+            radial-gradient(40% 50% at 25% 20%, rgba(201, 166, 255, 0.06), transparent 60%);
+}
+@keyframes fogDrift {
+    0%   { transform: translate(-3%, 2%) scale(1); }
+    50%  { transform: translate(3%, -2%) scale(1.06); }
+    100% { transform: translate(-2%, 3%) scale(1.02); }
+}
+
+.vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.75) 100%);
+}
+
+/* ------------------------------------------------------------
+   Start overlay
+   ------------------------------------------------------------ */
+#start-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 24px 16px;
+    background: rgba(5, 6, 10, 0.78);
+    backdrop-filter: blur(6px);
+    transition: opacity 1.2s ease, visibility 1.2s;
+}
+#start-overlay.hidden { opacity: 0; visibility: hidden; }
+
+.start-card {
+    width: min(580px, 100%);
+    padding: 40px 36px 28px;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(11, 13, 22, 0.9), rgba(5, 6, 10, 0.95));
+    box-shadow:
+            0 0 0 1px rgba(184, 242, 255, 0.04),
+            0 30px 80px rgba(0, 0, 0, 0.6),
+            inset 0 0 120px rgba(143, 211, 255, 0.03);
+    text-align: center;
+    animation: cardRise 1.6s ease-out both;
+}
+@keyframes cardRise {
+    from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
+    to   { opacity: 1; transform: none; filter: none; }
+}
+
+.eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-bottom: 14px;
+}
+
+.start-card h1 {
+    font-weight: 400;
+    font-size: clamp(48px, 9vw, 76px);
+    letter-spacing: 0.08em;
+    line-height: 1;
+    color: var(--wisp);
+    text-shadow: 0 0 18px var(--wisp-glow), 0 0 60px rgba(184, 242, 255, 0.25);
+    animation: breathe 5s ease-in-out infinite;
+}
+@keyframes breathe {
+    0%, 100% { text-shadow: 0 0 18px var(--wisp-glow), 0 0 60px rgba(184,242,255,0.25); }
+    50%      { text-shadow: 0 0 28px var(--wisp-glow), 0 0 90px rgba(184,242,255,0.40); }
+}
+
+.tagline {
+    margin: 18px 0 28px;
+    font-size: 19px;
+    font-style: italic;
+    line-height: 1.5;
+    color: var(--ink);
+}
+
+.rite {
+    text-align: left;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 16px 4px;
+    margin-bottom: 28px;
+}
+.rite-row {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 7px 0;
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink-dim);
+}
+.rite-row b { color: var(--ink); font-weight: 600; }
+.rite-row i { color: var(--wisp); }
+.sigil {
+    font-family: var(--mono);
+    color: var(--wisp);
+    opacity: 0.8;
+    text-align: center;
+    line-height: 1.45;
+    font-size: 14px;
+}
+
+#start-btn {
+    font-family: var(--serif);
+    font-size: 20px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    padding: 14px 40px 12px 44px;
+    color: var(--bg);
+    background: var(--wisp);
+    border: 0;
+    cursor: pointer;
+    box-shadow: 0 0 24px var(--wisp-glow), 0 0 70px rgba(184, 242, 255, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+#start-btn:hover {
+    transform: translateY(-1px);
+    background: #e6fbff;
+    box-shadow: 0 0 36px var(--wisp-glow), 0 0 110px rgba(184, 242, 255, 0.35);
+}
+#start-btn:active { transform: translateY(1px); }
+#start-btn:disabled { opacity: 0.4; cursor: wait; box-shadow: none; }
+
+.status {
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--ink-dim);
+    min-height: 1.4em;
+}
+.status.error { color: var(--ember); }
+
+.footnote {
+    margin-top: 18px;
+    font-size: 12.5px;
+    font-style: italic;
+    color: var(--ink-faint);
+}
+
+/* ------------------------------------------------------------
+   Stage
+   ------------------------------------------------------------ */
+#stage {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+}
+
+#webcam {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);            /* mirror so it feels like a mirror */
+    filter: grayscale(1) contrast(1.15) brightness(0.45);
+    opacity: 0.55;
+}
+
+#overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* ------------------------------------------------------------
+   Voice strip
+   ------------------------------------------------------------ */
+#voices {
+    position: absolute;
+    left: 50%;
+    bottom: 48px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    pointer-events: none;
+    transition: opacity 0.6s;
+}
+#voices.hidden { opacity: 0; }
+
+.voice-card {
+    --tint: var(--ink-faint);
+    position: relative;
+    width: clamp(120px, 16vw, 180px);
+    padding: 12px 14px 10px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    align-items: baseline;
+    border: 1px solid var(--line);
+    background: rgba(5, 6, 10, 0.55);
+    backdrop-filter: blur(4px);
+    color: var(--ink-faint);
+    transition: color 0.35s, box-shadow 0.35s, background 0.35s, transform 0.35s;
+}
+.voice-card[data-voice="drift"] { --tint: var(--drift); }
+.voice-card[data-voice="haunt"] { --tint: var(--haunt); }
+.voice-card[data-voice="knock"] { --tint: var(--knock); }
+.voice-card[data-voice="wail"]  { --tint: var(--wail); }
+
+.voice-card .n {
+    grid-row: 1 / span 2;
+    font-family: var(--mono);
+    font-size: 22px;
+    line-height: 1;
+    color: inherit;
+    opacity: 0.6;
+}
+.voice-card .voice {
+    font-size: clamp(16px, 1.8vw, 22px);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+.voice-card .reg {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.voice-card.active {
+    color: var(--tint);
+    transform: translateY(-4px);
+    background: color-mix(in srgb, var(--tint) 8%, rgba(5, 6, 10, 0.6));
+    box-shadow:
+            inset 0 0 0 1px color-mix(in srgb, var(--tint) 55%, transparent),
+            0 0 30px color-mix(in srgb, var(--tint) 25%, transparent);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--tint) 70%, transparent);
+}
+.voice-card.active .n { opacity: 1; }
+
+/* trigger pulse: add .pulse for 300ms */
+.voice-card.pulse { animation: cardPulse 0.3s ease-out; }
+@keyframes cardPulse {
+    0%   { background: color-mix(in srgb, var(--tint) 35%, transparent); }
+    100% { background: color-mix(in srgb, var(--tint) 8%, rgba(5, 6, 10, 0.6)); }
+}
+
+/* ------------------------------------------------------------
+   Vanish flash
+   ------------------------------------------------------------ */
+#vanish {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: var(--bg);
+    opacity: 0;
+}
+#vanish.flash { animation: vanish 0.55s ease-out; }
+@keyframes vanish {
+    0%   { opacity: 0.95; }
+    100% { opacity: 0; }
+}
+
+/* ------------------------------------------------------------
+   HUD
+   ------------------------------------------------------------ */
+#hud {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    padding: 12px 16px 10px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    background: rgba(5, 6, 10, 0.55);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+}
+.hud-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--wisp);
+    text-shadow: 0 0 12px var(--wisp-glow);
+    margin-bottom: 8px;
+}
+#hud > div:not(.hud-title) {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 10px;
+    line-height: 1.7;
+}
+#hud .k { color: var(--ink-faint); text-transform: uppercase; font-size: 10px; letter-spacing: 0.18em; }
+#hud span:not(.k) { color: var(--ink); }
+#hud-instrument.drift { color: var(--drift); }
+#hud-instrument.haunt { color: var(--haunt); }
+#hud-instrument.knock { color: var(--knock); }
+#hud-instrument.wail  { color: var(--wail); }
+
+/* ------------------------------------------------------------
+   Hints
+   ------------------------------------------------------------ */
+#hints {
+    position: absolute;
+    bottom: 14px;
+    right: 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    pointer-events: none;
+}
+kbd {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid var(--ink-faint);
+    color: var(--ink-dim);
+    border-radius: 3px;
+}
+
+/* ------------------------------------------------------------
+   Small screens
+   ------------------------------------------------------------ */
+@media (max-width: 640px) {
+    .start-card { padding: 28px 20px 20px; }
+    .rite-row { font-size: 14px; }
+    #hud { font-size: 10.5px; padding: 10px 12px 8px; }
+    #hints { display: none; }
+    #voices { gap: 6px; bottom: 16px; }
+    .voice-card { width: 22vw; padding: 8px; }
+    .voice-card .reg { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fog, .start-card h1 { animation: none; }
+}
