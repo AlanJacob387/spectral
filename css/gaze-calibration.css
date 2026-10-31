@@ -1,0 +1,13 @@
+.ghost-calibration { position: fixed; inset: 0; z-index: 100; background: rgba(5,6,10,.96); color: #b8f2ff; font: 14px/1.6 monospace; }
+.ghost-instructions { position: absolute; top: 3%; left: 50%; transform: translateX(-50%); width: min(90%,680px); text-align: center; }
+.ghost-title { font: 28px Georgia,serif; margin: 0 0 10px; }
+.ghost-message { margin: 0; }
+.ghost-preview { position: absolute; width: min(70vw,560px,65vh); aspect-ratio: 4/3; top: 50%; left: 50%; transform: translate(-50%,-50%); border: 1px solid #36535f; border-radius: 24px; overflow: hidden; }
+.ghost-preview video,.ghost-preview svg { position: absolute; width: 100%; height: 100%; inset: 0; }
+.ghost-preview video { object-fit: fill; transform: scaleX(-1); opacity: .7; }
+.ghost-preview svg { fill: none; stroke: #b8f2ff; stroke-width: 2; filter: drop-shadow(0 0 5px #8fd3ff); }
+.aligned .ghost-preview svg { stroke: #9effc9; filter: drop-shadow(0 0 8px #9effc9); }
+.ghost-progress { position: absolute; bottom: 5%; left: 5%; width: 90%; text-align: center; }
+.following .ghost-preview { visibility: hidden; }
+.ghost-light { position: absolute; transform: translate(-50%,-50%); width: 44px; height: 44px; border: 1px solid #b8f2ff; border-radius: 50%; box-shadow: 0 0 25px #8fd3ff88,inset 0 0 15px #8fd3ff55; }
+.ghost-light span { position: absolute; inset: 16px; border-radius: 50%; background: white; box-shadow: 0 0 15px #b8f2ff; }

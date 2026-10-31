@@ -28,6 +28,7 @@ export const tracking = {
 
 // ------------------------------------------------------------------
 export async function initTracking(videoEl, onStatus = () => {}, sharedStream = null) {
+    if (tracking.ready && video === videoEl && (!sharedStream || video.srcObject === sharedStream)) return;
     video = videoEl;
 
     onStatus('Opening the eye…');

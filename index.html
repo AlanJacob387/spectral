@@ -10,6 +10,7 @@
     <script defer src="src/webgazer.js"></script>
     <!-- Tone.js (audio engine) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <link rel="stylesheet" href="css/gaze-calibration.css">
 </head>
 <body>
 
@@ -18,7 +19,7 @@
 <div class="fog fog-2" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
 
-<!-- Start overlay: browsers require a user gesture before audio + camera -->
+<!-- Launch overlay: open palm starts calibration; browser permissions remain separate. -->
 <div id="start-overlay">
     <div class="start-card">
         <p class="eyebrow">A tool for the recently departed</p>
@@ -26,7 +27,7 @@
         <p class="tagline">You can no longer touch anything.<br />You can still gesture.<br />That is enough to play. Bring a second ghost; there is room for two.</p>
 
         <div class="rite">
-            <div class="rite-row"><span class="sigil">◉</span><span><b>Look left or right</b> to pan the sound. Calibrate your gaze after Manifest. One person’s gaze steers both players.</span></div>
+            <div class="rite-row"><span class="sigil">◉</span><span><b>Look left or right</b> to pan the sound. Raise an open palm to begin gaze calibration. One person’s gaze steers both players.</span></div>
             <div class="rite-row"><span class="sigil">✋</span><span><b>Right hand</b> rises for pitch. <b>Close</b> it to sound a note, <b>open</b> it to let go. Move fast to strike hard.</span></div>
             <div class="rite-row"><span class="sigil">✌</span><span><b>Right hand</b>, one finger → a <i>single</i> note. Two → <i>minor</i>, sorrowful. Three → <i>major</i>, at peace.</span></div>
             <div class="rite-row"><span class="sigil">☝</span><span><b>Left hand</b> raises fingers to choose the voice — <i>1 Drift</i> · <i>2 Haunt</i> · <i>3 Knock</i> · <i>4 Wail</i>.</span></div>
@@ -35,7 +36,11 @@
             <div class="rite-row"><span class="sigil">✊✊</span><span><b>Two fists, together</b> — and you vanish. Silence.</span></div>
         </div>
 
-        <button id="start-btn">Manifest</button>
+        <div id="gesture-launch">
+            <p class="launch-instruction">Raise an open palm to manifest</p>
+            <progress id="launch-progress" max="1" value="0" aria-label="Open palm hold progress"></progress>
+        </div>
+        <button id="retry-camera" hidden>Retry camera / calibration</button>
         <p id="status" class="status">Awaiting your presence…</p>
         <p class="footnote">Camera stays on this device. Nothing is sent anywhere. Nothing is touched.</p>
     </div>
@@ -46,6 +51,8 @@
     <div id="gaze-targets"></div>
 </section>
 <button id="recalibrate-gaze" hidden>Recalibrate gaze</button>
+
+<button id="audio-unlock">If sound is blocked, press any key or tap here to enable it.</button>
 
 <!-- Stage: webcam, canvas overlay, voice strip -->
 <main id="stage">

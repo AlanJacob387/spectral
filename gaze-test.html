@@ -59,6 +59,7 @@
     }
   </style>
   <script src="./src/webgazer.js" type="text/javascript"></script>
+  <link rel="stylesheet" href="css/gaze-calibration.css">
 </head>
 <body>
   <div id="controls">
@@ -70,151 +71,42 @@
   </div>
 
   <script type="module">
+    import { initGaze, calibrateGaze, updateGaze, gaze } from './src/gaze.js';
     import { initGazePointer, drawGazePointer } from './src/gaze-pointer.js';
-
-    initGazePointer();
-    function renderPointer(now) {
-      const point = window.gaze;
-      drawGazePointer({
-        tracking: !!point && now - point.ts <= 500,
-        x: point?.x, y: point?.y,
-      }, now);
-      requestAnimationFrame(renderPointer);
-    }
-    requestAnimationFrame(renderPointer);
     const status = document.querySelector('#status');
+    const start = document.querySelector('#start');
     const recalibrate = document.querySelector('#recalibrate');
     const readout = document.querySelector('#gaze-readout');
-    let completedTargets = 0;
-    let testing = false;
-
-    function finishCalibration() {
-      testing = true;
-      document.querySelectorAll('.target').forEach(target => {
-        target.hidden = true;
-      });
-      // Testing should not keep training on unrelated mouse movements.
-      window.webgazer.removeMouseEventListeners();
-      status.textContent =
-        'Calibration clicks complete. Look around without clicking: the glowing pointer shows estimated gaze. This is not an accuracy score.';
-      readout.hidden = false;
-      recalibrate.hidden = false;
-      document.querySelector('#start').hidden = true;
+    const details = document.querySelector('#error-details');
+    initGazePointer();
+    function render(now) {
+      updateGaze(now, innerWidth);
+      drawGazePointer(gaze, now);
+      if (gaze.calibrated) readout.textContent = gaze.tracking
+        ? `Estimated gaze: ${Math.round(gaze.x)}, ${Math.round(gaze.y)} pixels`
+        : 'Waiting for your eyes…';
+      requestAnimationFrame(render);
     }
-
-    recalibrate.addEventListener('click', async () => {
-      recalibrate.disabled = true;
-      try {
-        window.gaze = null;
-        await window.webgazer.clearData();
-        window.webgazer.addMouseEventListeners();
-        completedTargets = 0;
-        testing = false;
-        document.querySelectorAll('.target').forEach(target => {
-          target.dataset.clicks = '0';
-          target.textContent = '';
-          target.style.background = '';
-          target.disabled = false;
-          target.hidden = false;
-        });
-        recalibrate.hidden = true;
-        readout.hidden = true;
-        status.textContent = 'Look at each dot and click five times. 0 / 9 dots complete.';
-      } catch (error) {
-        status.textContent = `Could not recalibrate: ${error.message}`;
-      } finally {
-        recalibrate.disabled = false;
-      }
-    });
-
-    // Nine calibration targets distributed across the screen.
-    for (const y of [15, 50, 85]) {
-      for (const x of [10, 50, 90]) {
-        const target = document.createElement('button');
-        target.className = 'target';
-        target.style.left = `${x}%`;
-        target.style.top = `${y}%`;
-        target.title = 'Look here and click five times';
-        target.disabled = true;
-
-        target.dataset.clicks = '0';
-        target.addEventListener('click', () => {
-          const clicks = Number(target.dataset.clicks) + 1;
-          target.dataset.clicks = String(clicks);
-          target.textContent = clicks;
-          if (clicks === 5) {
-            target.style.background = '#9effc9';
-            target.disabled = true;
-            completedTargets++;
-          }
-          status.textContent =
-            `Look at each dot and click five times. ${completedTargets} / 9 dots complete.`;
-          if (completedTargets === 9) finishCalibration();
-        });
-
-        document.body.append(target);
-      }
-    }
-
-    document.querySelector('#start').addEventListener('click', async event => {
-      event.target.disabled = true;
-      const details = document.querySelector('#error-details');
+    requestAnimationFrame(render);
+    async function begin() {
+      start.disabled = recalibrate.disabled = true;
       details.hidden = true;
-      let phase = 'checking browser and library';
-
       try {
-        if (!window.isSecureContext) {
-          throw new Error('Open this page at http://localhost:8000/gaze-test.html or over HTTPS.');
-        }
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error('Camera access is unavailable in this browser context.');
-        }
-        const webgazer = window.webgazer;
-        if (typeof webgazer?.begin !== 'function') {
-          throw new Error('WebGazer did not load. Check the script request in the Network tab.');
-        }
-
-        // This WebGazer build defaults to ./mediapipe/face_mesh, which
-        // is not bundled with this project. Load its runtime assets here.
-        webgazer.params.faceMeshSolutionPath =
-          'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619';
-
-        phase = 'configuring regression';
-        webgazer.setRegression('ridge');
-        phase = 'configuring gaze listener';
-        webgazer.setGazeListener(data => {
-            if (testing) {
-              readout.textContent = data
-                ? `Estimated gaze: x ${Math.round(data.x)}, y ${Math.round(data.y)} pixels`
-                : 'No gaze prediction. Keep your face visible to the camera.';
-            }
-            if (!data) return;
-
-            // Estimated viewport coordinates, in pixels.
-            window.gaze = { x: data.x, y: data.y, ts: performance.now() };
-          });
-
-        phase = 'opening camera and starting the face model';
-        status.textContent = 'Opening camera and loading the face model…';
-        await webgazer.begin();
-
-        phase = 'showing predictions';
-        webgazer.showPredictionPoints(false);
-
-        document.querySelectorAll('.target').forEach(target => {
-          target.disabled = false;
-        });
-
-        status.textContent =
-          'Look directly at each blue dot and click it five times.';
+        await initGaze(text => { status.textContent = text; });
+        await calibrateGaze();
+        status.textContent = 'Calibration complete. Look around to test the glowing pointer.';
+        start.hidden = true;
+        recalibrate.hidden = readout.hidden = false;
       } catch (error) {
-        console.error(`WebGazer failed while ${phase}`, error);
-        status.textContent = `Could not start while ${phase}: ${error.message}`;
+        status.textContent = `Could not calibrate: ${error.message}`;
         details.textContent = error.stack || String(error);
         details.hidden = false;
-        event.target.disabled = false;
+      } finally {
+        start.disabled = recalibrate.disabled = false;
       }
-    });
+    }
+    start.addEventListener('click', begin);
+    recalibrate.addEventListener('click', begin);
   </script>
 </body>
 </html>

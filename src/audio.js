@@ -42,8 +42,17 @@ let master, reverb, delay;
 const players = new Map();   // slot → PlayerAudio
 
 // ------------------------------------------------------------------
-export async function startAudio() {
-    if (shared.started) return;
+let startingAudio = null;
+export function startAudio() {
+    if (shared.started) return Promise.resolve();
+    if (!startingAudio) startingAudio = buildAudio().catch(error => {
+        startingAudio = null;
+        throw error;
+    });
+    return startingAudio;
+}
+
+async function buildAudio() {
     await Tone.start();
 
     const limiter = new Tone.Limiter(-0.5).toDestination();

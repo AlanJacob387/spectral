@@ -1,3 +1,4 @@
+import { runCalibration } from './gaze-calibration.js';
 // One calibrated gaze controls the stereo pan of both player lanes.
 const ASSETS = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619';
 const LOST_MS = 500;
@@ -37,43 +38,11 @@ export async function calibrateGaze() {
     gaze.pan = 0;
     sample = null;
     lastUpdate = null;
-    const panel = document.getElementById('gaze-calibration');
-    const message = document.getElementById('gaze-calibration-status');
-    const targets = document.getElementById('gaze-targets');
     try {
-        await wg.clearData();
-        wg.removeMouseEventListeners();
-        wg.addMouseEventListeners();
-        panel.hidden = false;
-        targets.replaceChildren();
-        message.textContent = 'Look at each blue dot and click it five times. 0 / 9 complete.';
-        await new Promise(resolve => {
-            let completed = 0;
-            for (const y of [15, 50, 85]) for (const x of [10, 50, 90]) {
-                const button = document.createElement('button');
-                button.className = 'gaze-target';
-                button.style.left = `${x}%`;
-                button.style.top = `${y}%`;
-                button.setAttribute('aria-label', `Calibration target ${x} percent across, ${y} percent down`);
-                let clicks = 0;
-                button.addEventListener('click', () => {
-                    button.textContent = String(++clicks);
-                    if (clicks === 5) {
-                        button.disabled = true;
-                        button.classList.add('complete');
-                        completed++;
-                    }
-                    message.textContent = `Look at each blue dot and click it five times. ${completed} / 9 complete.`;
-                    if (completed === 9) resolve();
-                });
-                targets.append(button);
-            }
-        });
+        await runCalibration(wg);
         gaze.calibrated = true;
         sample = null;
     } finally {
-        wg.removeMouseEventListeners();
-        panel.hidden = true;
         gaze.calibrating = false;
     }
 }
