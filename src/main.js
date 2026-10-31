@@ -1,6 +1,8 @@
 // src/main.js — wires everything: tracking → players → gesture → mapping → ui
 
 import * as audio from './audio.js';
+import { initGazePointer, drawGazePointer } from './gaze-pointer.js';
+import { initGaze, calibrateGaze, updateGaze, gaze } from './gaze.js';
 import { initTracking, detect } from './tracking.js';
 import { assignPlayers, onLeave } from './players.js';
 import { analyzeHands, forgetPlayer } from './gesture.js';
@@ -28,14 +30,20 @@ startBtn.addEventListener('click', async () => {
     try {
         setStatus('Waking the voices…');
         await audio.startAudio();
-        await initTracking(video, setStatus);
+        const stream = await initGaze(setStatus);
+        await initTracking(video, setStatus, stream);
         initUI();
+        initGazePointer();
         overlay.classList.add('hidden');
         running = true;
         lastT = performance.now();
         requestAnimationFrame(loop);
+        await calibrateGaze();
+        $('recalibrate-gaze').hidden = false;
     } catch (err) {
+        running = false;
         console.error(err);
+        overlay.classList.remove('hidden');
         setStatus(err?.name === 'NotAllowedError'
             ? 'The eye was refused. Allow the camera and try again.'
             : `Something went wrong: ${err?.message || err}`, true);
@@ -47,6 +55,18 @@ function loop(now) {
     if (!running) return;
     const dt = now - lastT; lastT = now;
     fps = fps * 0.9 + (1000 / Math.max(dt, 1)) * 0.1;
+
+    const pan = updateGaze(now, window.innerWidth);
+    drawGazePointer(gaze, now);
+    // Apply to both lanes even while a sustained note has no visible hands.
+    for (const slot of [0, 1]) audio.getPlayer(slot).setPan(pan);
+    $('hud-gaze').textContent = gaze.calibrating ? 'calibrating'
+        : gaze.tracking ? 'tracking' : 'lost · centering';
+    $('hud-pan').textContent = pan.toFixed(2);
+    if (gaze.calibrating) {
+        requestAnimationFrame(loop);
+        return;
+    }
 
     const { hands } = detect(now);
     const players = assignPlayers(hands, now);
@@ -77,4 +97,19 @@ function setStatus(msg, isError = false) {
     statusEl.classList.toggle('error', isError);
 }
 
-window.spectral = { audio };
+$('recalibrate-gaze').addEventListener('click', async () => {
+    const button = $('recalibrate-gaze');
+    button.disabled = true;
+    audio.releasePlayer(0);
+    audio.releasePlayer(1);
+    try {
+        await calibrateGaze();
+    } catch (err) {
+        console.error(err);
+        $('hud-gaze').textContent = 'calibration failed';
+    } finally {
+        button.disabled = false;
+    }
+});
+
+window.spectral = { audio, gaze };

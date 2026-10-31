@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Hand tracking runtime</title></head>
+<body>
+<script>
+// Keep Tasks Vision's Emscripten globals separate from WebGazer's FaceMesh.
+// Store failures as values until the parent awaits this promise after load.
+window.handRuntimeReady = import('./hand-runtime.js').then(
+    runtime => ({ runtime }),
+    error => ({ error })
+);
+</script>
+</body>
+</html>

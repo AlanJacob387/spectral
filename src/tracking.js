@@ -11,19 +11,12 @@
 // Landmarks are normalized 0..1 in the raw camera frame (x NOT mirrored).
 // Callers mirror x themselves when drawing: xMirror = 1 - x.
 
-import {
-    FilesetResolver,
-    HandLandmarker,
-} from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs';
-
-const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
-const HAND_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
-
 const VIDEO_W = 640;
 const VIDEO_H = 480;
 
 let video = null;
-let handLandmarker = null;
+let handRuntime = null;
+let runtimeFrame = null;
 let lastVideoTime = -1;
 let lastResult = { hands: [], ts: 0 };
 
@@ -34,31 +27,52 @@ export const tracking = {
 };
 
 // ------------------------------------------------------------------
-export async function initTracking(videoEl, onStatus = () => {}) {
+export async function initTracking(videoEl, onStatus = () => {}, sharedStream = null) {
     video = videoEl;
 
     onStatus('Opening the eye…');
-    const stream = await navigator.mediaDevices.getUserMedia({
+    const stream = sharedStream ?? await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: VIDEO_W }, height: { ideal: VIDEO_H }, facingMode: 'user' },
         audio: false,
     });
-    video.srcObject = stream;
-    await new Promise(res => {
-        video.onloadedmetadata = () => { video.play(); res(); };
+    const metadata = new Promise(res => {
+        video.onloadedmetadata = res;
     });
+    video.srcObject = stream;
+    await metadata;
+    await video.play();
     tracking.videoWidth = video.videoWidth || VIDEO_W;
     tracking.videoHeight = video.videoHeight || VIDEO_H;
 
     onStatus('Summoning the model…');
-    const vision = await FilesetResolver.forVisionTasks(WASM_URL);
-    handLandmarker = await HandLandmarker.createFromOptions(vision, {
-        baseOptions: { modelAssetPath: HAND_MODEL, delegate: 'GPU' },
-        runningMode: 'VIDEO',
-        numHands: 4,
-        minHandDetectionConfidence: 0.6,
-        minHandPresenceConfidence: 0.6,
-        minTrackingConfidence: 0.6,
-    });
+    // The legacy FaceMesh loader and Tasks Vision both use Emscripten globals.
+    // A separate same-origin window prevents either loader reading the other's Module.
+    runtimeFrame?.remove();
+    const frame = document.createElement('iframe');
+    frame.title = 'Hand tracking runtime';
+    frame.setAttribute('aria-hidden', 'true');
+    frame.tabIndex = -1;
+    // Keep a rendered video surface for Safari, without exposing another preview.
+    frame.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:0;';
+    frame.src = new URL('./hand-runtime.html', import.meta.url).href;
+    runtimeFrame = frame;
+    try {
+        await new Promise((resolve, reject) => {
+            frame.onload = resolve;
+            frame.onerror = () => reject(new Error('Could not load the hand tracking runtime.'));
+            document.body.append(frame);
+        });
+        const ready = frame.contentWindow.handRuntimeReady;
+        if (!ready) throw new Error('Hand tracking runtime is missing. Reload the page.');
+        const { runtime, error } = await ready;
+        if (error) throw error;
+        await runtime.initialize(stream);
+        handRuntime = runtime;
+    } catch (error) {
+        frame.remove();
+        runtimeFrame = null;
+        throw error;
+    }
 
     tracking.ready = true;
     onStatus('Present.');
@@ -73,7 +87,7 @@ export function detect(nowMs) {
     if (video.currentTime === lastVideoTime) return lastResult;
     lastVideoTime = video.currentTime;
 
-    const hr = handLandmarker.detectForVideo(video, nowMs);
+    const hr = handRuntime.detect(nowMs);
     const hands = [];
     for (let i = 0; i < hr.landmarks.length; i++) {
         const cat = hr.handednesses?.[i]?.[0] ?? hr.handedness?.[i]?.[0];

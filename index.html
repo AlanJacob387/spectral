@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/style.css" />
+    <script defer src="src/webgazer.js"></script>
     <!-- Tone.js (audio engine) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 </head>
@@ -25,6 +26,7 @@
         <p class="tagline">You can no longer touch anything.<br />You can still gesture.<br />That is enough to play. Bring a second ghost; there is room for two.</p>
 
         <div class="rite">
+            <div class="rite-row"><span class="sigil">◉</span><span><b>Look left or right</b> to pan the sound. Calibrate your gaze after Manifest. One person’s gaze steers both players.</span></div>
             <div class="rite-row"><span class="sigil">✋</span><span><b>Right hand</b> rises for pitch. <b>Close</b> it to sound a note, <b>open</b> it to let go. Move fast to strike hard.</span></div>
             <div class="rite-row"><span class="sigil">✌</span><span><b>Right hand</b>, one finger → a <i>single</i> note. Two → <i>minor</i>, sorrowful. Three → <i>major</i>, at peace.</span></div>
             <div class="rite-row"><span class="sigil">☝</span><span><b>Left hand</b> raises fingers to choose the voice — <i>1 Drift</i> · <i>2 Haunt</i> · <i>3 Knock</i> · <i>4 Wail</i>.</span></div>
@@ -38,6 +40,12 @@
         <p class="footnote">Camera stays on this device. Nothing is sent anywhere. Nothing is touched.</p>
     </div>
 </div>
+
+<section id="gaze-calibration" hidden aria-label="Gaze calibration">
+    <p id="gaze-calibration-status" role="status"></p>
+    <div id="gaze-targets"></div>
+</section>
+<button id="recalibrate-gaze" hidden>Recalibrate gaze</button>
 
 <!-- Stage: webcam, canvas overlay, voice strip -->
 <main id="stage">
@@ -92,6 +100,8 @@
     <div id="hud">
         <div class="hud-title">Spectral</div>
         <div><span class="k">key</span><span id="hud-key">C</span></div>
+        <div><span class="k">gaze</span><span id="hud-gaze">awaiting calibration</span></div>
+        <div><span class="k">pan</span><span id="hud-pan">0.00</span></div>
         <div><span class="k">fps</span><span id="hud-fps">0</span></div>
     </div>
 

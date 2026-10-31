@@ -9,7 +9,7 @@
 //   1 finger  → single note      fist        → sustain
 //   2 fingers → minor chord
 //   3 fingers → major chord
-//   left–right→ pan
+//   GAZE: horizontal screen position → pan (applied in main.js)
 //
 //   BOTH: distance apart → reverb + volume
 //         two fists, close together → vanish (silence)
@@ -83,8 +83,6 @@ export function applyMapping(audio, hands, nowMs, playerId = 0) {
 
     // ---------- RIGHT: play ----------
     if (right) {
-        audio.setPan(lerp(-0.8, 0.8, right.x));
-
         if (!right.closed) {
             const f = right.fingersStable;
             if (f === 1 && audio.state.chord !== 1) { audio.setChord(1); ev.modeChanged = true; }

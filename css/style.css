@@ -424,3 +424,57 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
     .fog, .start-card h1 { animation: none; }
 }
+/* Gaze calibration sits above the stage and webcam overlays. */
+#gaze-calibration {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(5, 6, 10, 0.88);
+}
+#gaze-calibration[hidden], #recalibrate-gaze[hidden] { display: none; }
+#gaze-calibration-status {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(90vw, 560px);
+    text-align: center;
+    font: 14px/1.5 var(--mono);
+    color: var(--wisp);
+    pointer-events: none;
+}
+.gaze-target {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    transform: translate(-50%, -50%);
+    border: 2px solid white;
+    border-radius: 50%;
+    background: #8fd3ff;
+    color: #05060a;
+    cursor: pointer;
+    z-index: 1;
+}
+.gaze-target.complete { background: #9effc9; opacity: 0.5; }
+#recalibrate-gaze {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 20;
+    padding: 10px 14px;
+    border: 1px solid var(--wisp);
+    background: var(--bg-2);
+    color: var(--wisp);
+    font: 12px var(--mono);
+    cursor: pointer;
+}
+#webgazerVideoContainer, #webgazerGazeDot { pointer-events: none; }
+
+#gaze-pointer {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 110;
+    pointer-events: none;
+}
