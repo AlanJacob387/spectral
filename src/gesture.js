@@ -1,35 +1,33 @@
-// src/gesture.js — pure hand-feature extraction. Landmarks in, gesture state out.
+// src/gesture.js - pure hand-feature extraction. Landmarks in, gesture state out.
 // No audio, no DOM. Keeps per-hand history for smoothing, hysteresis and velocity.
 //
 // Public API:
-//   analyzeHands(hands, nowMs) → { right: HandState|null, left: HandState|null }
-//   handsDistance(right, left) → 0..1 | null
-//
-// HandState:
-//   x, y            palm center, 0..1, MIRRORED (x=0 user's left on screen), y=0 top
-//   yUp             1 - y  (0 low .. 1 high)
-//   closed          fist (hysteresis)
-//   pinch           thumb–index (hysteresis)
-//   fingersUp       0..4 raw (index..pinky)
-//   fingersStable   0..4, only changes after being held FINGER_HOLD_MS (for voice select)
-//   velocity        |Δy| per second, smoothed
-//   velocityNorm    0..1
-//   openness        0..1 (0 fist, 1 open)
-//   landmarks       raw landmarks (unmirrored) for drawing
-//   handedness      'Right' | 'Left'
+//   analyzeHands(hands, nowMs, playerId?) -> { right: HandState|null, left: HandState|null }
+//   handsDistance(right, left)            -> 0..1 | null
+//   forgetPlayer(playerId)
 
 import { HAND } from './tracking.js';
 
 const EMA_POS = 0.35;
 const EMA_VEL = 0.25;
-const CLOSE_ON = 0.80;       // openness ratio: closed when below (and no finger extended)
-const CLOSE_OFF = 0.95;      // reopen when above
+const CLOSE_ON = 0.80;
+const CLOSE_OFF = 0.95;
 const PINCH_ON = 0.30;
 const PINCH_OFF = 0.45;
 const LOST_MS = 300;
-const FINGER_HOLD_MS = 180;  // finger count must hold this long before it "counts"
+const FINGER_HOLD_MS = 180;
 
-const hist = { Right: newHist(), Left: newHist() };
+const hist = new Map();   // `${playerId}:${handedness}` -> history
+
+function histFor(playerId, label) {
+    const k = `${playerId}:${label}`;
+    if (!hist.has(k)) hist.set(k, newHist());
+    return hist.get(k);
+}
+
+export function forgetPlayer(playerId) {
+    for (const k of [...hist.keys()]) if (k.startsWith(`${playerId}:`)) hist.delete(k);
+}
 
 function newHist() {
     return {
@@ -39,13 +37,12 @@ function newHist() {
     };
 }
 
-// ------------------------------------------------------------------
-export function analyzeHands(hands, nowMs) {
+export function analyzeHands(hands, nowMs, playerId = 0) {
     const out = { right: null, left: null };
 
     for (const h of hands) {
         const label = h.handedness === 'Right' ? 'Right' : 'Left';
-        const s = hist[label];
+        const s = histFor(playerId, label);
         if (nowMs - s.lastSeen > LOST_MS) Object.assign(s, newHist());
         s.lastSeen = nowMs;
 
@@ -53,7 +50,7 @@ export function analyzeHands(hands, nowMs) {
         const palm = palmCenter(lm);
         const pw = dist(lm[HAND.WRIST], lm[HAND.MIDDLE_MCP]) || 1e-3;
 
-        const rx = 1 - palm.x;   // mirror
+        const rx = 1 - palm.x;
         const ry = palm.y;
 
         s.x = s.x == null ? rx : lerp(s.x, rx, EMA_POS);
@@ -66,7 +63,6 @@ export function analyzeHands(hands, nowMs) {
         s.prevY = s.y;
         s.prevT = nowMs;
 
-        // per-finger extension: tip farther from the wrist than the PIP joint (angle-independent)
         const wrist = lm[HAND.WRIST];
         const pairs = [
             [HAND.INDEX_TIP, HAND.INDEX_PIP],
@@ -77,20 +73,16 @@ export function analyzeHands(hands, nowMs) {
         const extended = pairs.map(([t, p]) => dist(lm[t], wrist) > dist(lm[p], wrist) * 1.12);
         const fingersUp = extended.filter(Boolean).length;
 
-        // openness (for the analog value + fist hysteresis)
         const tips = [HAND.INDEX_TIP, HAND.MIDDLE_TIP, HAND.RING_TIP, HAND.PINKY_TIP];
         const openness = tips.reduce((a, i) => a + dist(lm[i], palm), 0) / tips.length / pw;
 
-        // fist = no finger extended; hysteresis on openness avoids flicker at the boundary
         if (s.closed && (fingersUp > 0 || openness > CLOSE_OFF)) s.closed = false;
         else if (!s.closed && fingersUp === 0 && openness < CLOSE_ON) s.closed = true;
 
-        // pinch
         const pinchRatio = dist(lm[HAND.THUMB_TIP], lm[HAND.INDEX_TIP]) / pw;
         if (s.pinch && pinchRatio > PINCH_OFF) s.pinch = false;
         else if (!s.pinch && pinchRatio < PINCH_ON) s.pinch = true;
 
-        // debounce
         if (fingersUp !== s.fingersCandidate) {
             s.fingersCandidate = fingersUp;
             s.fingersSince = nowMs;
@@ -123,13 +115,12 @@ export function handsDistance(right, left) {
     return clamp01(Math.hypot(right.x - left.x, right.y - left.y));
 }
 
-// ------------------------------------------------------------------
 function palmCenter(lm) {
     const ids = [HAND.WRIST, HAND.INDEX_MCP, HAND.MIDDLE_MCP, HAND.RING_MCP, HAND.PINKY_MCP];
     let x = 0, y = 0, z = 0;
     for (const i of ids) { x += lm[i].x; y += lm[i].y; z += lm[i].z; }
-    return { x: x / ids.length, y: y / ids.length, z: z / ids.length };
-}
-function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-function lerp(a, b, t) { return a + (b - a) * t; }
-function clamp01(v) { return Math.min(1, Math.max(0, v)); }
+        return { x: x / ids.length, y: y / ids.length, z: z / ids.length };
+    }
+    function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function clamp01(v) { return Math.min(1, Math.max(0, v)); }

@@ -1,9 +1,10 @@
-// src/main.js — wires everything: tracking → gesture → mapping → ui
+// src/main.js — wires everything: tracking → players → gesture → mapping → ui
 
 import * as audio from './audio.js';
 import { initTracking, detect } from './tracking.js';
-import { analyzeHands } from './gesture.js';
-import { applyMapping } from './mapping.js';
+import { assignPlayers, onLeave } from './players.js';
+import { analyzeHands, forgetPlayer } from './gesture.js';
+import { applyMapping, forgetMapping } from './mapping.js';
 import { initUI, drawFrame, toggleVoices } from './ui.js';
 
 const $ = id => document.getElementById(id);
@@ -14,6 +15,13 @@ const video = $('webcam');
 
 let running = false;
 let fps = 0, lastT = 0;
+
+// a player left → silence their lane, forget their gesture/mapping memory
+onLeave((id, slot) => {
+    audio.releasePlayer(slot);
+    forgetPlayer(id);
+    forgetMapping(id);
+});
 
 startBtn.addEventListener('click', async () => {
     startBtn.disabled = true;
@@ -41,17 +49,25 @@ function loop(now) {
     fps = fps * 0.9 + (1000 / Math.max(dt, 1)) * 0.1;
 
     const { hands } = detect(now);
-    const h = analyzeHands(hands, now); window.spectral.hands = h;
-    const ev = applyMapping(h, now);
-    drawFrame(h, ev, fps);
+    const players = assignPlayers(hands, now);
+
+    const frames = players.map(p => {
+        const h = analyzeHands(p.hands, now, p.id);
+        const a = audio.getPlayer(p.slot);
+        const ev = applyMapping(a, h, now, p.id);
+        return { slot: p.slot, id: p.id, hands: h, audio: a, ev };
+    });
+
+    drawFrame(frames, fps);
+    $('hud-key').textContent = audio.shared.key;
+    window.spectral.frames = frames;
 
     requestAnimationFrame(loop);
 }
 
-// keyboard
 window.addEventListener('keydown', e => {
     if (!running) return;
-    if (e.code === 'Space') { e.preventDefault(); audio.releaseAll(); }
+    if (e.code === 'Space') { e.preventDefault(); audio.releasePlayer(0); audio.releasePlayer(1); }
     else if (e.key === 'k' || e.key === 'K') audio.nextKey();
     else if (e.key === 'v' || e.key === 'V') toggleVoices();
 });
@@ -61,5 +77,4 @@ function setStatus(msg, isError = false) {
     statusEl.classList.toggle('error', isError);
 }
 
-// expose for console poking
 window.spectral = { audio };

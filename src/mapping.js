@@ -1,39 +1,43 @@
-// src/mapping.js — the ONLY place gesture state becomes sound.
+// src/mapping.js — the ONLY place gesture state becomes sound. Runs once per player.
 //
-//   RIGHT hand = play       LEFT hand = choose & shape
-//   ─────────────────       ──────────────────────────
-//   height    → pitch       fingers 1–4 → voice (drift/haunt/knock/wail)
-//   fist      → note on     height      → filter (dark ↔ bright)
-//   open      → release     left–right  → octave (deep ↔ shrill)
-//   speed     → velocity    pinch       → arpeggio on/off
-//   left–right→ pan         fist        → sustain
+//   RIGHT hand = play            LEFT hand = choose & shape
+//   ──────────────────────       ──────────────────────────
+//   height    → pitch            fingers 1–4 → voice (drift/haunt/knock/wail)
+//   fist      → note on          height      → filter (dark ↔ bright)
+//   open      → release          left–right  → octave (deep ↔ shrill)
+//   speed     → velocity         pinch       → arpeggio on/off
+//   1 finger  → single note      fist        → sustain
+//   2 fingers → minor chord
+//   3 fingers → major chord
+//   left–right→ pan
 //
 //   BOTH: distance apart → reverb + volume
 //         two fists, close together → vanish (silence)
 //
 // Public API:
-//   applyMapping(hands, nowMs) → events { triggered, vanished, voiceChanged }
+//   applyMapping(playerAudio, hands, nowMs) → events { triggered, vanished, voiceChanged, modeChanged }
+//   forgetMapping(playerId)
 
-import * as audio from './audio.js';
 import { handsDistance } from './gesture.js';
 
 const VOICE_BY_FINGERS = { 1: 'drift', 2: 'haunt', 3: 'knock', 4: 'wail' };
-const VANISH_DIST = 0.16;        // palms this close (normalized) + both fists = vanish
+const VANISH_DIST = 0.16;
 const VANISH_COOLDOWN_MS = 900;
-const WAIL_RETRIGGER_MS = 40;    // how often to update the glide pitch
+const WAIL_RETRIGGER_MS = 40;
 
-const m = {
-    rightWasClosed: false,
-    leftWasClosed: false,
-    leftWasPinch: false,
-    lastVanish: 0,
-    lastWail: 0,
-    lastVoice: 'drift',
-};
+const mem = new Map();   // playerId → per-player edge-detection memory
 
-export function applyMapping(hands, nowMs) {
+function memFor(id) {
+    if (!mem.has(id)) mem.set(id, { rightWasClosed: false, leftWasClosed: false, leftWasPinch: false, lastVanish: 0, lastWail: 0 });
+    return mem.get(id);
+}
+
+export function forgetMapping(id) { mem.delete(id); }
+
+export function applyMapping(audio, hands, nowMs, playerId = 0) {
+    const m = memFor(playerId);
     const { right, left } = hands;
-    const ev = { triggered: false, vanished: false, voiceChanged: false };
+    const ev = { triggered: false, vanished: false, voiceChanged: false, modeChanged: false };
 
     // ---------- LEFT: choose & shape ----------
     if (left) {
@@ -50,7 +54,7 @@ export function applyMapping(hands, nowMs) {
 
         if (left.pinch !== m.leftWasPinch) {
             m.leftWasPinch = left.pinch;
-            if (left.pinch) audio.setArp(!audio.state.arp);   // toggle on each new pinch
+            if (left.pinch) audio.setArp(!audio.state.arp);
         }
 
         if (left.closed !== m.leftWasClosed) {
@@ -66,12 +70,12 @@ export function applyMapping(hands, nowMs) {
     const d = handsDistance(right, left);
     if (d != null) {
         audio.setReverb(lerp(0.15, 0.85, clamp01((d - 0.1) / 0.6)));
-        audio.setVolume(lerp(6, 10, clamp01((d - 0.1) / 0.6)));
+        audio.setVolume(lerp(0, 4, clamp01((d - 0.1) / 0.6)));
 
         if (right.closed && left.closed && d < VANISH_DIST && nowMs - m.lastVanish > VANISH_COOLDOWN_MS) {
             m.lastVanish = nowMs;
             audio.releaseAll();
-            m.rightWasClosed = true;     // don't retrigger until the fist opens again
+            m.rightWasClosed = true;
             ev.vanished = true;
             return ev;
         }
@@ -81,6 +85,13 @@ export function applyMapping(hands, nowMs) {
     if (right) {
         audio.setPan(lerp(-0.8, 0.8, right.x));
 
+        if (!right.closed) {
+            const f = right.fingersStable;
+            if (f === 1 && audio.state.chord !== 1) { audio.setChord(1); ev.modeChanged = true; }
+            else if (f === 2 && (audio.state.mode !== 'minor' || audio.state.chord !== 3)) { audio.setChord(3); audio.setMode('minor'); ev.modeChanged = true; }
+            else if (f === 3 && (audio.state.mode !== 'major' || audio.state.chord !== 3)) { audio.setChord(3); audio.setMode('major'); ev.modeChanged = true; }
+        }
+
         const isWail = audio.state.instrument === 'wail';
 
         if (right.closed && !m.rightWasClosed) {
@@ -89,10 +100,10 @@ export function applyMapping(hands, nowMs) {
             ev.triggered = true;
             m.lastWail = nowMs;
         } else if (right.closed && isWail && nowMs - m.lastWail > WAIL_RETRIGGER_MS) {
-            audio.trigger(right.yUp, 0.8);     // glide
+            audio.trigger(right.yUp, 0.8);
             m.lastWail = nowMs;
         } else if (right.closed && audio.state.arp) {
-            audio.trigger(right.yUp, 0.8);     // retarget the arpeggio while fist held
+            audio.trigger(right.yUp, 0.8);
         } else if (!right.closed && m.rightWasClosed) {
             m.rightWasClosed = false;
             audio.release();
@@ -105,7 +116,6 @@ export function applyMapping(hands, nowMs) {
     return ev;
 }
 
-// ------------------------------------------------------------------
 function expMap(t, lo, hi) { return lo * Math.pow(hi / lo, clamp01(t)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function clamp01(v) { return Math.min(1, Math.max(0, v)); }
